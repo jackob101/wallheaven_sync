@@ -1,3 +1,5 @@
+use core::panic;
+
 use self::models::Wallpaper;
 
 use self::models::Collection;
@@ -11,9 +13,16 @@ pub fn get_collections(username: &str) -> Vec<Collection> {
         .text()
         .unwrap();
 
-    let response: models::CollectionsResponse = serde_json::from_str(&body).unwrap();
-
-    response.data
+    match serde_json::from_str::<models::CollectionsResponse>(&body) {
+        Ok(value) => value.data,
+        Err(_) => match serde_json::from_str::<models::CollectionsErrorResponse>(&body) {
+            Ok(value) => match value.error.as_str() {
+                "Nothing here" => vec![],
+                value => panic!("Unhandled error response: {}", value),
+            },
+            Err(err) => panic!("failed to parse wallheaven API response: {}", err),
+        },
+    }
 }
 
 pub fn get_wallpapers_from_collection(username: &str, collection_id: i32) -> Vec<Wallpaper> {

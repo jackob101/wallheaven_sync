@@ -26,7 +26,25 @@ pub fn synchronization_info(collection: &Collection) {
     println!("Synchronizing collection: {}", collection.label)
 }
 
-fn get_input_i32(prompt: &str, max_bound: i32) -> i32 {
+pub fn get_string(prompt: &str) -> String {
+    print!("{}: ", prompt);
+    stdout().flush().expect("Failed to flush stdout!");
+    let mut input = "".to_owned();
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read user input");
+    input = input.trim().to_owned();
+
+    match input.len() {
+        0 => {
+            println!("Please input value");
+            get_string(prompt)
+        }
+        _ => input,
+    }
+}
+
+pub fn get_input_i32(prompt: &str, max_bound: i32) -> i32 {
     print!("{}: ", prompt);
     stdout().flush().expect("Failed to flush stdout!");
     let mut input = "".to_owned();
@@ -44,8 +62,26 @@ fn get_input_i32(prompt: &str, max_bound: i32) -> i32 {
             }
         }
         Err(_) => {
-            println!("Incorrect value! Please input numeric value");
+            println!("Incorrect value! Please ");
             get_input_i32(prompt, max_bound)
+        }
+    }
+}
+
+pub fn get_input_bool(prompt: &str) -> bool {
+    print!("{}[y/n]: ", prompt);
+    stdout().flush().expect("Failed to flush stdout!");
+    let mut input = "".to_owned();
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read user input");
+
+    match input.trim() {
+        "y" | "Y" => true,
+        "n" | "N" => false,
+        _ => {
+            println!("Invalid value, please try again");
+            get_input_bool(prompt)
         }
     }
 }

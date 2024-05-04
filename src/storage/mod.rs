@@ -1,7 +1,9 @@
+use core::panic;
 use std::{
     env,
     ffi::OsStr,
     fs::{self, read_dir},
+    io::Error,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -27,8 +29,29 @@ pub fn get_storage_path() -> PathBuf {
     PathBuf::from_str(&value).unwrap()
 }
 
-pub fn get_collection(storage_path: &PathBuf, label: &str) -> Vec<Metadata> {
+pub fn init_storage(storage_path: &PathBuf) {
+    if let Err(err) = fs::create_dir(storage_path) {
+        panic!("Failed to create storage directory: {}", err)
+    }
+}
+
+pub fn init_collection(storage_path: &PathBuf, label: &str) {
     let collection_path = storage_path.join(label);
+
+    match fs::create_dir(&collection_path) {
+        Ok(val) => val,
+        Err(err) => {
+            panic!("Failed to create collection directory: {}", err)
+        }
+    };
+}
+
+pub fn get_collection(storage_path: &PathBuf, label: &str) -> Option<Vec<Metadata>> {
+    let collection_path = storage_path.join(label);
+
+    if !Path::new(&collection_path).exists() {
+        return None;
+    }
 
     let iterator = match read_dir(collection_path) {
         Ok(iterator) => iterator,
