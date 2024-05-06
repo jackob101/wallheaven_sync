@@ -1,8 +1,11 @@
 use std::io::{self, stdout, Write};
 
-use crate::wallheaven::{
-    self,
-    models::{self, Collection},
+use crate::{
+    storage::models::Metadata,
+    wallheaven::{
+        self,
+        models::{self, Collection},
+    },
 };
 
 pub fn select_collection(
@@ -83,5 +86,21 @@ pub fn get_input_bool(prompt: &str) -> bool {
             println!("Invalid value, please try again");
             get_input_bool(prompt)
         }
+    }
+}
+
+pub fn info_print<F, T>(header: &str, new_metadata: &[T], mapper: F)
+where
+    F: Fn(&T) -> &str,
+{
+    let body = new_metadata
+        .iter()
+        .enumerate()
+        .map(|(index, e)| format!("{} -> {}\n", index + 1, mapper(&e)))
+        .reduce(|acc, e| acc + &e);
+
+    match body {
+        Some(value) => println!("{}:\n{}", header, value),
+        None => (),
     }
 }

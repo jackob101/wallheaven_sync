@@ -56,6 +56,8 @@ fn main() {
 
     let not_synced = find_not_synced(&wallpapers_in_collection, &collection_from_storage);
 
+    prompts::info_print("Wallpapers to sync", &not_synced, |e| &e.url);
+
     let mut new_metadata = vec![];
 
     for e in &not_synced {
