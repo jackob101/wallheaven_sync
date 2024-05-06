@@ -2,8 +2,8 @@ use core::panic;
 use std::{
     env,
     ffi::OsStr,
-    fs::{self, read_dir},
-    io::Error,
+    fs::{self, read_dir, File},
+    io::{Error, Write},
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -38,12 +38,14 @@ pub fn init_storage(storage_path: &PathBuf) {
 pub fn init_collection(storage_path: &PathBuf, label: &str) {
     let collection_path = storage_path.join(label);
 
-    match fs::create_dir(&collection_path) {
-        Ok(val) => val,
-        Err(err) => {
-            panic!("Failed to create collection directory: {}", err)
-        }
-    };
+    if let Err(_) = fs::metadata(&collection_path) {
+        match fs::create_dir(&collection_path) {
+            Ok(val) => val,
+            Err(err) => {
+                panic!("Failed to create collection directory: {}", err)
+            }
+        };
+    }
 }
 
 pub fn get_collection(storage_path: &PathBuf, label: &str) -> Option<Vec<Metadata>> {
@@ -88,18 +90,33 @@ pub fn get_collection(storage_path: &PathBuf, label: &str) -> Option<Vec<Metadat
         }
     }
 
-    let metadata_content = match metadata_file {
+    match metadata_file {
         Some(file) => match fs::read_to_string(file.path()) {
-            Ok(content) => content,
+            Ok(content) => match serde_json::from_str(&content) {
+                Ok(v) => v,
+                Err(err) => panic!("Failed to parse index.json. {}", err),
+            },
             Err(err) => {
                 panic!("Failed to read content of index.json, {}", err);
             }
         },
-        None => "".to_owned(),
+        None => None,
+    }
+}
+
+pub fn persist_metadata(updated_collection: Vec<Metadata>, label: &str, storage_path: &PathBuf) {
+    let full_path_to_metadata = storage_path.join(label).join("index.json");
+    let mut file = match File::create(full_path_to_metadata) {
+        Ok(file) => file,
+        Err(err) => {
+            panic!("{}", err)
+        }
     };
 
-    match serde_json::from_str(&metadata_content) {
-        Ok(v) => v,
-        Err(err) => panic!("Failed to parse index.json. {}", err),
-    }
+    let json = match serde_json::to_string(&updated_collection) {
+        Ok(value) => value,
+        Err(err) => panic!("{}", err),
+    };
+
+    let _ = file.write_all(json.as_bytes());
 }

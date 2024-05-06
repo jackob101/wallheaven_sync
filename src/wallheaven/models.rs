@@ -34,3 +34,24 @@ pub struct Wallpaper {
 pub struct Meta {
     pub last_page: i32,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WallpaperDetailsResponse {
+    pub data: WallpaperDetailsResponseData,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WallpaperDetailsResponseData {
+    pub thumbs: Thumb,
+    pub tags: Vec<Tag>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Thumb {
+    pub original: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Tag {
+    pub name: String,
+}
