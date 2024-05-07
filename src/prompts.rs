@@ -1,12 +1,6 @@
 use std::io::{self, stdout, Write};
 
-use crate::{
-    storage::models::Metadata,
-    wallheaven::{
-        self,
-        models::{self, Collection},
-    },
-};
+use crate::wallheaven::{self, models::Collection};
 
 pub fn select_collection(
     collections: &Vec<wallheaven::models::Collection>,

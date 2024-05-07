@@ -1,4 +1,4 @@
-use std::{env, os, process::exit};
+use std::{env, process::exit};
 
 use storage::models::Metadata;
 use wallheaven::models::Wallpaper;
@@ -15,7 +15,7 @@ fn main() {
     let storage_path = storage::get_storage_path();
 
     println!(
-        "Storage under path {}",
+        "Storage path: {}",
         &storage_path
             .to_str()
             .expect("Failed to convert path to str")
@@ -75,7 +75,7 @@ fn main() {
     println!("Downloading:");
 
     for (index, e) in not_synced.iter().enumerate() {
-        println!("[{}/{}] -> {}...", index + 1, not_synced.len(), e.url);
+        println!("[{}/{}] {}...", index + 1, not_synced.len(), e.url);
         let file_metadata = wallheaven::download_wallpaper_metadata(&e);
         //TODO split this. wallheaven module should download the file bytes and the storage module
         //should save it into hard drive

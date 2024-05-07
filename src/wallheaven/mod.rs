@@ -2,9 +2,15 @@ use core::panic;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
+use std::thread::sleep;
+use std::time::Duration;
 
-use uuid::Uuid;
+use reqwest::blocking::Client;
+use reqwest::blocking::ClientBuilder;
+use reqwest::blocking::RequestBuilder;
+use reqwest::header::RETRY_AFTER;
 
+use crate::prompts;
 use crate::storage::models::Metadata;
 
 use self::models::Wallpaper;
@@ -62,7 +68,9 @@ pub fn get_wallpapers_from_collection(username: &str, collection_id: i32) -> Vec
 
 pub fn download_wallpaper_metadata(wallpaper: &Wallpaper) -> Metadata {
     let url = format!("https://wallhaven.cc/api/v1/w/{}", &wallpaper.id);
-    let body = reqwest::blocking::get(&url).unwrap().text().unwrap();
+    let client = get_client();
+    let request_builder = client.get(url);
+    let body = repeating(&client, request_builder);
 
     let response: models::WallpaperDetailsResponse = serde_json::from_str(&body).unwrap();
     let original_thumb = response.data.thumbs.original;
@@ -85,7 +93,10 @@ pub fn save_image_content(
     collection_name: &str,
     filename: &str,
 ) {
-    let body = reqwest::blocking::get(url).unwrap().text().unwrap();
+    let client = get_client();
+    let request_builder = client.get(url);
+
+    let body = repeating(&client, request_builder);
     let full_path = storage_path.join(collection_name).join(filename);
 
     let mut file = match File::create(full_path) {
@@ -96,4 +107,42 @@ pub fn save_image_content(
     };
 
     let _ = file.write_all(body.as_bytes());
+}
+
+fn get_client() -> Client {
+    ClientBuilder::new()
+        .user_agent("wallheaven_sync/pietrzyk.jakub001@gmail.com")
+        .build()
+        .unwrap()
+}
+
+fn repeating(client: &Client, request: RequestBuilder) -> String {
+    let request = request.build().expect("failed to build request");
+
+    loop {
+        let response = match client.execute(request.try_clone().unwrap()) {
+            Ok(value) => value,
+            Err(_) => {
+                panic!("Failed to get response")
+            }
+        };
+
+        match response.headers().get(RETRY_AFTER) {
+            Some(value) => {
+                let retry_after = value.to_str().unwrap();
+                prompts::info(&format!(
+                    "Reached request per minute limit, waiting {} seconds...",
+                    retry_after
+                ));
+                sleep(Duration::from_secs_f64(
+                    retry_after
+                        .parse::<f64>()
+                        .expect("retry-after header is not numeric value"),
+                ));
+            }
+            None => (),
+        };
+
+        return response.text().unwrap();
+    }
 }
