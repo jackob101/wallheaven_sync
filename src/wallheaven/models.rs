@@ -44,6 +44,7 @@ pub struct WallpaperDetailsResponse {
 pub struct WallpaperDetailsResponseData {
     pub thumbs: Thumb,
     pub tags: Vec<Tag>,
+    pub path: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

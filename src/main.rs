@@ -1,4 +1,4 @@
-use std::{env, process::exit};
+use std::{env, fs, process::exit};
 
 use storage::models::Metadata;
 use wallheaven::models::Wallpaper;
@@ -7,11 +7,72 @@ mod prompts;
 mod storage;
 mod wallheaven;
 fn main() {
-    let username = match env::args().nth(1) {
-        Some(val) => val,
-        None => prompts::get_string("Username"),
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() > 1 {
+        match args[1].as_str() {
+            "--refresh" => refresh(),
+            username => sync(username),
+        }
+    } else {
+        sync(&prompts::get_string("Username"));
+    }
+}
+
+fn refresh() {
+    let storage_path = storage::get_storage_path();
+
+    if !storage_path.exists() {
+        println!("Cannot refresh not existing collection");
+        exit(1);
+    }
+
+    let collections = storage::get_collections(&storage_path);
+
+    if collections.is_empty() {
+        prompts::info("There are no collections in storage");
+        exit(0)
+    }
+
+    let selection = prompts::select_from_list("Collections", &collections, |e| &e);
+    let wallpapers = match storage::get_collection(&storage_path, selection) {
+        Some(value) => value,
+        None => {
+            println!("Nothing to refresh");
+            exit(0)
+        }
     };
 
+    let collection_path = storage_path.join(selection);
+    let files: Vec<String> = fs::read_dir(&collection_path)
+        .unwrap()
+        .into_iter()
+        .filter(|e| e.is_ok())
+        .map(|e| e.unwrap())
+        .map(|e| e.file_name())
+        .map(|e| e.to_str().unwrap().to_owned())
+        .filter(|e| !(*e).eq("index.json"))
+        .collect();
+
+    for file in &files {
+        match wallpapers.iter().any(|e| e.filename.eq(file)) {
+            false => {
+                let _ = fs::remove_file(collection_path.join(&file));
+                ()
+            }
+            true => (),
+        };
+    }
+
+    let updated_metadata: Vec<Metadata> = wallpapers
+        .into_iter()
+        .filter(|e| files.contains(&e.filename))
+        .collect();
+
+    storage::persist_metadata(updated_metadata, selection, &storage_path);
+}
+
+fn sync(username: &str) {
     let storage_path = storage::get_storage_path();
 
     println!(
@@ -80,7 +141,7 @@ fn main() {
         //TODO split this. wallheaven module should download the file bytes and the storage module
         //should save it into hard drive
         wallheaven::save_image_content(
-            &file_metadata.source_url,
+            &file_metadata.path,
             &storage_path,
             &selected_collection.label,
             &file_metadata.filename,

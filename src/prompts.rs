@@ -19,6 +19,27 @@ pub fn select_collection(
         .expect("get_input_i32 guarantes value in range")
 }
 
+pub fn select_from_list<'a, F, T>(header: &str, entries: &'a Vec<T>, map: F) -> &'a T
+where
+    F: Fn(&T) -> &str,
+{
+    let body = entries
+        .iter()
+        .enumerate()
+        .map(|(index, e)| format!("{} -> {}", index + 1, map(e)))
+        .reduce(|acc, e| acc + &e + "\n")
+        .expect("Vector must contains at least one element");
+
+    println!("{}\n{}", header, body);
+    let _ = stdout().flush();
+
+    let selection = get_input_i32("Select option", entries.len() as i32) - 1;
+
+    entries
+        .get(selection as usize)
+        .expect("get_input_i32 guarantes value in range")
+}
+
 pub fn synchronization_info(collection: &Collection) {
     println!("Synchronizing collection: {}", collection.label)
 }

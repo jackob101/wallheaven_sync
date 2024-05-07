@@ -120,3 +120,24 @@ pub fn persist_metadata(updated_collection: Vec<Metadata>, label: &str, storage_
 
     let _ = file.write_all(json.as_bytes());
 }
+
+pub fn get_collections(storage_path: &PathBuf) -> Vec<String> {
+    let dir_iterator = fs::read_dir(storage_path).expect("Storage is missing");
+
+    let mut collections = vec![];
+
+    for e in dir_iterator {
+        match e {
+            Ok(e) => match e.metadata() {
+                Ok(metadata) if metadata.is_dir() => {
+                    collections.push(e.file_name().to_str().unwrap().to_owned())
+                }
+                Ok(_) => (),
+                Err(err) => panic!("Failed to get metadata: {}", err),
+            },
+            Err(err) => panic!("Failed to read directory: {}", err),
+        };
+    }
+
+    collections
+}

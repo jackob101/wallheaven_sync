@@ -2,6 +2,7 @@ use core::panic;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::Bytes;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -73,7 +74,7 @@ pub fn download_wallpaper_metadata(wallpaper: &Wallpaper) -> Metadata {
     let body = repeating(&client, request_builder);
 
     let response: models::WallpaperDetailsResponse = serde_json::from_str(&body).unwrap();
-    let original_thumb = response.data.thumbs.original;
+    let original_thumb = response.data.path;
     let image_extension = match original_thumb.split(".").last() {
         Some(extension) => extension,
         None => "jpg",
@@ -84,6 +85,7 @@ pub fn download_wallpaper_metadata(wallpaper: &Wallpaper) -> Metadata {
         filename: format!("{}.{}", uuid.to_string(), image_extension),
         tags: response.data.tags.into_iter().map(|e| e.name).collect(),
         source_url: wallpaper.url.clone(),
+        path: original_thumb,
     }
 }
 
@@ -96,7 +98,7 @@ pub fn save_image_content(
     let client = get_client();
     let request_builder = client.get(url);
 
-    let body = repeating(&client, request_builder);
+    let body = repeating_bytes(&client, request_builder);
     let full_path = storage_path.join(collection_name).join(filename);
 
     let mut file = match File::create(full_path) {
@@ -106,7 +108,7 @@ pub fn save_image_content(
         }
     };
 
-    let _ = file.write_all(body.as_bytes());
+    let _ = file.write_all(&body);
 }
 
 fn get_client() -> Client {
@@ -114,6 +116,37 @@ fn get_client() -> Client {
         .user_agent("wallheaven_sync/pietrzyk.jakub001@gmail.com")
         .build()
         .unwrap()
+}
+
+fn repeating_bytes(client: &Client, request: RequestBuilder) -> Vec<u8> {
+    let request = request.build().expect("failed to build request");
+
+    loop {
+        let response = match client.execute(request.try_clone().unwrap()) {
+            Ok(value) => value,
+            Err(_) => {
+                panic!("Failed to get response")
+            }
+        };
+
+        match response.headers().get(RETRY_AFTER) {
+            Some(value) => {
+                let retry_after = value.to_str().unwrap();
+                prompts::info(&format!(
+                    "Reached request per minute limit, waiting {} seconds...",
+                    retry_after
+                ));
+                sleep(Duration::from_secs_f64(
+                    retry_after
+                        .parse::<f64>()
+                        .expect("retry-after header is not numeric value"),
+                ));
+            }
+            None => (),
+        };
+
+        return response.bytes().unwrap().to_vec();
+    }
 }
 
 fn repeating(client: &Client, request: RequestBuilder) -> String {
