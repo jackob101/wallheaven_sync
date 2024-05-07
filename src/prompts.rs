@@ -89,6 +89,30 @@ pub fn get_input_bool(prompt: &str) -> bool {
     }
 }
 
+pub fn get_input_bool_with_default(prompt: &str, default: bool) -> bool {
+    let options = match default {
+        true => "[Y/n]",
+        false => "[y/N]",
+    };
+
+    print!("{}{}: ", prompt, options);
+    stdout().flush().expect("Failed to flush stdout!");
+    let mut input = "".to_owned();
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read user input");
+
+    match input.trim() {
+        "y" | "Y" => true,
+        "n" | "N" => false,
+        "" => default,
+        _ => {
+            println!("Invalid value, please try again");
+            get_input_bool(prompt)
+        }
+    }
+}
+
 pub fn info_print<F, T>(header: &str, new_metadata: &[T], mapper: F)
 where
     F: Fn(&T) -> &str,
@@ -103,4 +127,8 @@ where
         Some(value) => println!("{}:\n{}", header, value),
         None => (),
     }
+}
+
+pub(crate) fn info(prompt: &str) {
+    println!("{}", prompt);
 }

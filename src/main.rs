@@ -1,4 +1,4 @@
-use std::{env, process::exit};
+use std::{env, os, process::exit};
 
 use storage::models::Metadata;
 use wallheaven::models::Wallpaper;
@@ -56,11 +56,26 @@ fn main() {
 
     let not_synced = find_not_synced(&wallpapers_in_collection, &collection_from_storage);
 
+    if not_synced.is_empty() {
+        prompts::info("Everything is up to date");
+        exit(0);
+    }
+
     prompts::info_print("Wallpapers to sync", &not_synced, |e| &e.url);
+
+    let confirm_sync = prompts::get_input_bool_with_default("Do you want to continue?", true);
+
+    if !confirm_sync {
+        println!("Aborting");
+        exit(0);
+    }
 
     let mut new_metadata = vec![];
 
-    for e in &not_synced {
+    println!("Downloading:");
+
+    for (index, e) in not_synced.iter().enumerate() {
+        println!("[{}/{}] -> {}...", index + 1, not_synced.len(), e.url);
         let file_metadata = wallheaven::download_wallpaper_metadata(&e);
         //TODO split this. wallheaven module should download the file bytes and the storage module
         //should save it into hard drive
