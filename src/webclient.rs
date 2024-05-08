@@ -8,13 +8,13 @@ use reqwest::{
 
 use crate::prompts;
 
-pub fn download_image(url: Url) -> Result<Vec<u8>, String> {
+pub fn download_image(url: &Url) -> Result<Vec<u8>, String> {
     download_image_with_client(&create_client(), url)
 }
 
-fn download_image_with_client(client: &Client, url: Url) -> Result<Vec<u8>, String> {
+fn download_image_with_client(client: &Client, url: &Url) -> Result<Vec<u8>, String> {
     let request = client
-        .get(url)
+        .get(url.clone())
         .header(HeaderName::from_static("accept"), "image/*");
 
     let response = repeating(&client, request);

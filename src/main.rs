@@ -2,6 +2,7 @@ use std::{env, fs, path::PathBuf, process::exit};
 
 use reqwest::Url;
 use storage::models::Metadata;
+use uuid::Uuid;
 use wallheaven::models::Wallpaper;
 
 mod prompts;
@@ -15,10 +16,110 @@ fn main() {
         match args[1].as_str() {
             "--refresh" => refresh(),
             "--rebuild" => rebuild(),
+            "--add" => {
+                // let arg = match args.get(2) {
+                //     Some(value) => value,
+                //     None => {
+                //         println!("Supply the URL!");
+                //         exit(1);
+                //     }
+                // };
+                // let url = match Url::parse(arg) {
+                //     Ok(url) => url,
+                //     Err(err) => {
+                //         println!("Incorrect url {}", err);
+                //         exit(1);
+                //     }
+                // };
+
+                add();
+            }
             username => sync(username),
         }
     } else {
-        sync(&prompts::get_string("Username"));
+        sync(&prompts::get_input_string("Username"));
+    }
+}
+
+fn add() {
+    let storage_path = storage::get_storage_path();
+
+    if !storage_path.exists() {
+        println!("Storage directory is missing");
+        exit(1);
+    }
+
+    let collections = storage::get_collections(&storage_path);
+
+    if collections.is_empty() {
+        prompts::info("There are no collections in storage");
+        exit(0)
+    }
+
+    let selection = prompts::select_from_list("Collections", &collections, |e| &e);
+
+    let collection_path = storage_path.join(selection);
+    let mut collection = storage::get_collection(&storage_path, selection).unwrap();
+    let url = get_url();
+    let tags = get_tags();
+    let extension = get_extension(&url);
+    let filename = format!("{}.{}", Uuid::new_v4().to_string(), extension);
+
+    let metadata = Metadata {
+        filename,
+        tags,
+        source_url: url.to_string(),
+        image_url: url.to_string(),
+    };
+
+    match webclient::download_image(&url) {
+        Ok(value) => {
+            fs::write(collection_path.join(&metadata.filename), value);
+            prompts::info(&format!("Saved {}", &metadata.filename));
+            collection.push(metadata);
+            storage::persist_metadata(collection, selection, &storage_path);
+        }
+        Err(_) => {
+            println!("Failed to download image");
+            exit(1);
+        }
+    }
+}
+
+fn get_url() -> Url {
+    let url = prompts::get_input_string("Url");
+    match Url::parse(&url) {
+        Ok(value) => value,
+        Err(_) => {
+            println!("Invalid value, please try again");
+            get_url()
+        }
+    }
+}
+
+fn get_tags() -> Vec<String> {
+    let value = prompts::get_input_string("Provide tags ( separated by , )");
+
+    value
+        .split(",")
+        .map(|e| e.to_owned())
+        .collect::<Vec<String>>()
+}
+
+fn get_extension(url: &Url) -> String {
+    match url.to_string().split(".").last() {
+        Some(value) if !value.is_empty() => {
+            let answer = prompts::get_input_string(&format!(
+                "Filetype {}, input to override or leave blank to confirm",
+                value
+            ));
+            if answer.is_empty() {
+                value.to_owned()
+            } else {
+                answer
+            }
+        }
+        _ => prompts::get_input_string("Input file extension ( example: jpg )"),
     }
 }
 
@@ -67,7 +168,7 @@ fn rebuild() {
 
     for (index, e) in to_rebuild.iter().enumerate() {
         prompts::print_progress(index + 1, to_rebuild_size, &e.filename);
-        let response = match webclient::download_image(Url::parse(&e.image_url).unwrap()) {
+        let response = match webclient::download_image(&Url::parse(&e.image_url).unwrap()) {
             Ok(response) => response,
             Err(err) => {
                 println!("Failed to download image: {}", err);

@@ -44,23 +44,23 @@ pub fn synchronization_info(collection: &Collection) {
     println!("Synchronizing collection: {}", collection.label)
 }
 
-pub fn get_string(prompt: &str) -> String {
-    print!("{}: ", prompt);
-    stdout().flush().expect("Failed to flush stdout!");
-    let mut input = "".to_owned();
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read user input");
-    input = input.trim().to_owned();
-
-    match input.len() {
-        0 => {
-            println!("Please input value");
-            get_string(prompt)
-        }
-        _ => input,
-    }
-}
+// pub fn get_input_string(prompt: &str) -> String {
+//     print!("{}: ", prompt);
+//     stdout().flush().expect("Failed to flush stdout!");
+//     let mut input = "".to_owned();
+//     io::stdin()
+//         .read_line(&mut input)
+//         .expect("Failed to read user input");
+//     input = input.trim().to_owned();
+//
+//     match input.len() {
+//         0 => {
+//             println!("Please input value");
+//             get_input_string(prompt)
+//         }
+//         _ => input,
+//     }
+// }
 
 pub fn get_input_i32(prompt: &str, max_bound: i32) -> i32 {
     print!("{}: ", prompt);
@@ -150,4 +150,15 @@ pub(crate) fn info(prompt: &str) {
 
 pub(crate) fn print_progress(index: usize, total: usize, body: &str) {
     println!("[{}/{}] {}...", index, total, body);
+}
+
+pub fn get_input_string(prompt: &str) -> String {
+    print!("{}: ", prompt);
+    stdout().flush().expect("Failed to flush stdout!");
+    let mut input = "".to_owned();
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read user input");
+
+    input.trim().to_owned()
 }
