@@ -2,13 +2,14 @@ use core::panic;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use std::str::Bytes;
+
 use std::thread::sleep;
 use std::time::Duration;
 
 use reqwest::blocking::Client;
 use reqwest::blocking::ClientBuilder;
 use reqwest::blocking::RequestBuilder;
+use reqwest::blocking::Response;
 use reqwest::header::RETRY_AFTER;
 
 use crate::prompts;
@@ -71,7 +72,7 @@ pub fn download_wallpaper_metadata(wallpaper: &Wallpaper) -> Metadata {
     let url = format!("https://wallhaven.cc/api/v1/w/{}", &wallpaper.id);
     let client = get_client();
     let request_builder = client.get(url);
-    let body = repeating(&client, request_builder);
+    let body = repeating_text(&client, request_builder);
 
     let response: models::WallpaperDetailsResponse = serde_json::from_str(&body).unwrap();
     let original_thumb = response.data.path;
@@ -118,38 +119,15 @@ fn get_client() -> Client {
         .unwrap()
 }
 
-fn repeating_bytes(client: &Client, request: RequestBuilder) -> Vec<u8> {
-    let request = request.build().expect("failed to build request");
-
-    loop {
-        let response = match client.execute(request.try_clone().unwrap()) {
-            Ok(value) => value,
-            Err(_) => {
-                panic!("Failed to get response")
-            }
-        };
-
-        match response.headers().get(RETRY_AFTER) {
-            Some(value) => {
-                let retry_after = value.to_str().unwrap();
-                prompts::info(&format!(
-                    "Reached request per minute limit, waiting {} seconds...",
-                    retry_after
-                ));
-                sleep(Duration::from_secs_f64(
-                    retry_after
-                        .parse::<f64>()
-                        .expect("retry-after header is not numeric value"),
-                ));
-            }
-            None => (),
-        };
-
-        return response.bytes().unwrap().to_vec();
-    }
+fn repeating_text(client: &Client, request: RequestBuilder) -> String {
+    repeating(client, request).text().unwrap()
 }
 
-fn repeating(client: &Client, request: RequestBuilder) -> String {
+fn repeating_bytes(client: &Client, request: RequestBuilder) -> Vec<u8> {
+    repeating(client, request).bytes().unwrap().to_vec()
+}
+
+fn repeating(client: &Client, request: RequestBuilder) -> Response {
     let request = request.build().expect("failed to build request");
 
     loop {
@@ -176,6 +154,6 @@ fn repeating(client: &Client, request: RequestBuilder) -> String {
             None => (),
         };
 
-        return response.text().unwrap();
+        return response;
     }
 }
