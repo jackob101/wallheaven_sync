@@ -26,8 +26,8 @@ where
     let body = entries
         .iter()
         .enumerate()
-        .map(|(index, e)| format!("{} -> {}", index + 1, map(e)))
-        .reduce(|acc, e| acc + &e + "\n")
+        .map(|(index, e)| format!("{} -> {}\n", index + 1, map(e)))
+        .reduce(|acc, e| acc + &e)
         .expect("Vector must contains at least one element");
 
     println!("{}\n{}", header, body);
@@ -146,4 +146,8 @@ where
 
 pub(crate) fn info(prompt: &str) {
     println!("{}", prompt);
+}
+
+pub(crate) fn print_progress(index: usize, total: usize, body: &str) {
+    println!("[{}/{}] {}...", index, total, body);
 }

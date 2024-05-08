@@ -5,5 +5,5 @@ pub struct Metadata {
     pub filename: String,
     pub tags: Vec<String>,
     pub source_url: String,
-    pub path: String,
+    pub image_url: String,
 }

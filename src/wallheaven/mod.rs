@@ -86,7 +86,7 @@ pub fn download_wallpaper_metadata(wallpaper: &Wallpaper) -> Metadata {
         filename: format!("{}.{}", uuid.to_string(), image_extension),
         tags: response.data.tags.into_iter().map(|e| e.name).collect(),
         source_url: wallpaper.url.clone(),
-        path: original_thumb,
+        image_url: original_thumb,
     }
 }
 
