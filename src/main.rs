@@ -5,6 +5,16 @@ use storage::models::Metadata;
 use uuid::Uuid;
 use wallheaven::models::Wallpaper;
 
+//TODO: Clean code below, Add some proper handling to errors
+//Check if collection doesn't already have entry with passed url.
+//TODO: Clean up prompts module, I think there is a way to get input and then pass some
+//mapping closure, this would remove all of the 'get_input_<type>' in favor of one generic
+//method
+//TODO: Create github repo
+//TODO: Add help menu
+//TODO: The methods which send request in wallheaven modules should go to webclient module
+//TODO: Change webclient module name to something better
+//
 mod prompts;
 mod storage;
 mod wallheaven;
@@ -12,32 +22,15 @@ mod webclient;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() > 1 {
+    if args.len() < 2 {
+        sync()
+    } else {
         match args[1].as_str() {
             "--refresh" => refresh(),
             "--rebuild" => rebuild(),
-            "--add" => {
-                // let arg = match args.get(2) {
-                //     Some(value) => value,
-                //     None => {
-                //         println!("Supply the URL!");
-                //         exit(1);
-                //     }
-                // };
-                // let url = match Url::parse(arg) {
-                //     Ok(url) => url,
-                //     Err(err) => {
-                //         println!("Incorrect url {}", err);
-                //         exit(1);
-                //     }
-                // };
-
-                add();
-            }
-            username => sync(username),
+            "--add" => add(),
+            _ => sync(),
         }
-    } else {
-        sync(&prompts::get_input_string("Username"));
     }
 }
 
@@ -74,7 +67,7 @@ fn add() {
 
     match webclient::download_image(&url) {
         Ok(value) => {
-            fs::write(collection_path.join(&metadata.filename), value);
+            storage::save(&collection_path, selection, &metadata.filename, value);
             prompts::info(&format!("Saved {}", &metadata.filename));
             collection.push(metadata);
             storage::persist_metadata(collection, selection, &storage_path);
@@ -229,7 +222,9 @@ fn refresh() {
     storage::persist_metadata(updated_metadata, selection, &storage_path);
 }
 
-fn sync(username: &str) {
+fn sync() {
+    let username = &prompts::get_input_string("Username");
+
     let storage_path = storage::get_storage_path();
 
     println!(
@@ -240,7 +235,10 @@ fn sync(username: &str) {
     );
 
     if !storage_path.exists() {
-        match prompts::get_input_bool("Storage doesn't exists, do You want to create it?") {
+        match prompts::get_input(
+            "Storage doesn't exists, do You want to create it?[Y/n]",
+            prompts::mappers::bool_mapper_with_default(true),
+        ) {
             true => storage::init_storage(&storage_path),
             false => {
                 println!("Aborting");
@@ -256,7 +254,7 @@ fn sync(username: &str) {
         exit(0)
     }
 
-    let selected_collection = prompts::select_collection(&collections);
+    let selected_collection = prompts::select_from_list("Collections:", &collections, |e| &e.label);
 
     prompts::synchronization_info(selected_collection);
 
@@ -281,7 +279,10 @@ fn sync(username: &str) {
 
     prompts::info_print("Wallpapers to sync", &not_synced, |e| &e.url);
 
-    let confirm_sync = prompts::get_input_bool_with_default("Do you want to continue?", true);
+    let confirm_sync = prompts::get_input(
+        "Do you want to continue?[Y/n]",
+        prompts::mappers::bool_mapper_with_default(true),
+    );
 
     if !confirm_sync {
         println!("Aborting");

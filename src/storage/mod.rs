@@ -14,6 +14,17 @@ pub mod models;
 
 const ALLOWED_WALLPAPER_FORMATS: [&'static str; 3] = ["jpg", "png", "jpeg"];
 
+pub fn save(storage_path: &PathBuf, collection: &str, filename: &str, content: Vec<u8>) {
+    let file_path = storage_path.join(collection).join(filename);
+    if let Err(err) = fs::write(&file_path, content) {
+        println!(
+            "Failed to save file under path '{}', reason: {}",
+            file_path.to_str().unwrap(),
+            err
+        )
+    };
+}
+
 pub fn get_storage_path() -> PathBuf {
     let key = "WALLHEAVEN_SYNC_STORAGE_PATH";
 
