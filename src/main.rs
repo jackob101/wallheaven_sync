@@ -6,11 +6,7 @@ use uuid::Uuid;
 use wallheaven::models::Wallpaper;
 
 //TODO: Clean code below, Add some proper handling to errors
-//Check if collection doesn't already have entry with passed url.
-//TODO: Clean up prompts module, I think there is a way to get input and then pass some
-//mapping closure, this would remove all of the 'get_input_<type>' in favor of one generic
-//method
-//TODO: Create github repo
+//TODO: Check if collection doesn't already have entry with passed url.
 //TODO: Add help menu
 //TODO: The methods which send request in wallheaven modules should go to webclient module
 //TODO: Change webclient module name to something better
@@ -54,6 +50,12 @@ fn add() {
     let collection_path = storage_path.join(selection);
     let mut collection = storage::get_collection(&storage_path, selection).unwrap();
     let url = get_url();
+
+    if collection.iter().any(|e| e.image_url.eq(&url.to_string())) {
+        prompts::info("Url already exists in storage metadata, aborting");
+        exit(1);
+    };
+
     let tags = get_tags();
     let extension = get_extension(&url);
     let filename = format!("{}.{}", Uuid::new_v4().to_string(), extension);
