@@ -6,7 +6,6 @@ use uuid::Uuid;
 use wallheaven::models::Wallpaper;
 
 //TODO: Clean code below, Add some proper handling to errors
-//TODO: Check if collection doesn't already have entry with passed url.
 //TODO: Add help menu
 //TODO: The methods which send request in wallheaven modules should go to webclient module
 //TODO: Change webclient module name to something better
@@ -18,16 +17,31 @@ mod webclient;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() < 2 {
-        sync()
-    } else {
-        match args[1].as_str() {
+    match args.len() {
+        1 => sync(),
+        2 => match args[1].as_str() {
             "--refresh" => refresh(),
             "--rebuild" => rebuild(),
             "--add" => add(),
+            "--help" => help(),
             _ => sync(),
-        }
-    }
+        },
+        _ => help(),
+    };
+}
+
+fn help() {
+    println!(
+        "\
+Usage: wallheaven_sync [OPTION] 
+       wallheaven_sync [USERNAME] 
+
+Options: 
+--refresh      Do not use
+--rebuild      Download all wallpapers declared in index.json
+--add          Add new wallpaper to index.json
+--help         Print help menu"
+    )
 }
 
 fn add() {
