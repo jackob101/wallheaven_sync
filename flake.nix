@@ -27,6 +27,6 @@
       nativeBuildInputs = [pkgs.pkg-config];
       PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
     };
-    overlays.default = final: prev: {inherit (self.packages.${prev.system}) default;};
+    overlays.default = final: prev: {inherit (self.packages.${prev.system}.default);};
   };
 }
