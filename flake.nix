@@ -14,18 +14,21 @@
     pkgs = import nixpkgs {system = "x86_64-linux";};
   in {
     nixpkgs.overlays = [rust-overlay.overlays.default];
-    packages.x86_64-linux.default = pkgs.rustPlatform.buildRustPackage {
-      pname = "wallheaven_sync";
-      version = "0.0.1";
-      src = ./.;
-      cargoBuildFlags = "--release";
+    packages.x86_64-linux = {
+      default = pkgs.rustPlatform.buildRustPackage {
+        pname = "wallheaven_sync";
+        version = "0.0.1";
+        src = ./.;
+        cargoBuildFlags = "--release";
 
-      cargoLock = {
-        lockFile = ./Cargo.lock;
+        cargoLock = {
+          lockFile = ./Cargo.lock;
+        };
+
+        nativeBuildInputs = [pkgs.pkg-config];
+        PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
       };
-
-      nativeBuildInputs = [pkgs.pkg-config];
-      PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
+      wallheaven_sync = self.packages.x86_64-linux.default;
     };
     overlays.default = final: prev: {inherit (self.packages.${prev.system}.default);};
   };
