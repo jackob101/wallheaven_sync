@@ -61,7 +61,6 @@ fn add() {
 
     let selection = prompts::select_from_list("Collections", &collections, |e| &e);
 
-    let collection_path = storage_path.join(selection);
     let mut collection = storage::get_collection(&storage_path, selection).unwrap();
     let url = get_url();
 
@@ -83,7 +82,7 @@ fn add() {
 
     match webclient::download_image(&url) {
         Ok(value) => {
-            storage::save(&collection_path, selection, &metadata.filename, value);
+            storage::save(&storage_path, selection, &metadata.filename, value);
             prompts::info(&format!("Saved {}", &metadata.filename));
             collection.push(metadata);
             storage::persist_metadata(collection, selection, &storage_path);
