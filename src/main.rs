@@ -6,7 +6,6 @@ use uuid::Uuid;
 use wallheaven::models::Wallpaper;
 
 //TODO: Clean code below, Add some proper handling to errors
-//TODO: Add help menu
 //TODO: The methods which send request in wallheaven modules should go to webclient module
 //TODO: Change webclient module name to something better
 //
